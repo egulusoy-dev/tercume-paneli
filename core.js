@@ -3,6 +3,9 @@
 
 export const norm = s => String(s ?? '').replace(/[´`’']/g, "'").replace(/\s+/g, ' ').trim().toLocaleLowerCase('tr');
 export const nums = s => (String(s ?? '').match(/\d+/g) || []).sort().join(',');
+export const own = (o, k) => (o && Object.prototype.hasOwnProperty.call(o, k) ? o[k] : undefined);
+// Remove control characters that make Word reject the file
+export const clean = s => String(s ?? '').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
 export const toNum = s => { const v = parseFloat(String(s ?? '').replace(',', '.')); return isNaN(v) ? null : v; };
 
 export const LANG = {
@@ -37,7 +40,7 @@ const TR_ONLY = [/^baba/, /^mühür/, /^sorgu/, /^okul/, /^müdür/, /^öğren/,
 
 // ---------- glossary ----------
 export function lookups(G) {
-  const exact = {}, suggested = {}, open = {};
+  const exact = Object.create(null), suggested = Object.create(null), open = Object.create(null);
   for (const sec of ['header', 'fields', 'subjects', 'diploma', 'other_documents', 'degrees', 'grades', 'patronymic'])
     for (const [k, v] of Object.entries(G[sec] || {})) if (!k.startsWith('_') && typeof v === 'string') exact[norm(k)] = v;
   for (const [k, v] of Object.entries(G.not_in_sample_suggested || {})) if (!k.startsWith('_')) suggested[norm(k)] = v;
@@ -70,7 +73,7 @@ export const visibleNotes = (doc, L) => (doc.notes || []).filter(n => !L.omit.so
 
 // Glossary first; returns strings the model still has to translate
 export function glossaryPass(texts, L) {
-  const tr = {}, pending = [];
+  const tr = Object.create(null), pending = [];
   for (const t of texts) {
     const k = norm(t.src);
     if (k in tr) continue;
@@ -89,7 +92,7 @@ export function runChecks(doc, tr, G, dir) {
   const seen = new Set();
   for (const t of texts) {
     const k = norm(t.src); if (seen.has(t.where + '|' + k)) continue; seen.add(t.where + '|' + k);
-    const out = tr[k] || '';
+    const out = own(tr, k) || '';
     const known = L.exact[k] !== undefined;
     if (L.open[k] && !(G._decided || {})[k]) {
       const opts = openOptions(L.open[k]);
@@ -150,8 +153,8 @@ export function turkishDate(d = new Date()) {
 
 export function buildBody(doc, tr, G, dir, footerText, { issues = [], date = new Date() } = {}) {
   const L = lookups(G), D = LANG[dir];
-  const T_ = s => (s ? (tr[norm(s)] || s) : s);
-  const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const T_ = s => (s ? (own(tr, norm(s)) || s) : s);
+  const esc = s => clean(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const FILL = { red: 'F8C9C9', yellow: 'FFF0B3' };
   const level = where => (issues.some(i => i.where === where && i.level === 'red') ? 'red' : issues.some(i => i.where === where) ? 'yellow' : null);
   const numCell = v => (dir === 'tr->az' ? String(v ?? '').replace(/(\d)\.(\d)/g, '$1,$2') : String(v ?? ''));
@@ -164,7 +167,7 @@ export function buildBody(doc, tr, G, dir, footerText, { issues = [], date = new
     `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${span > 1 ? `<w:gridSpan w:val="${span}"/>` : ''}${vm ? `<w:vMerge${vm === 'restart' ? ' w:val="restart"' : ''}/>` : ''}${fill ? `<w:shd w:val="clear" w:color="auto" w:fill="${fill}"/>` : ''}<w:vAlign w:val="center"/></w:tcPr>${para(t, { b, sz, align })}</w:tc>`;
   const table = (rows, widths) => {
     const B = ['top', 'left', 'bottom', 'right', 'insideH', 'insideV'].map(s => `<w:${s} w:val="single" w:sz="4" w:space="0" w:color="000000"/>`).join('');
-    return `<w:tbl><w:tblPr><w:tblW w:w="${widths.reduce((a, b) => a + b, 0)}" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblBorders>${B}</w:tblBorders><w:tblCellMar><w:left w:w="50" w:type="dxa"/><w:right w:w="50" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${widths.map(w => `<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>${rows.map(r => `<w:tr>${r.join('')}</w:tr>`).join('')}</w:tbl>`;
+    return `<w:tbl><w:tblPr><w:tblW w:w="${widths.reduce((a, b) => a + b, 0)}" w:type="dxa"/><w:tblBorders>${B}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="50" w:type="dxa"/><w:right w:w="50" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${widths.map(w => `<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>${rows.map(r => `<w:tr>${r.join('')}</w:tr>`).join('')}</w:tbl>`;
   };
   const W = 10716, body = [];
 
