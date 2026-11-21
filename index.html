@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tercüme Paneli</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📄</text></svg>">
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --ink:#1f2937; --mut:#6b7280; --line:#e5e7eb; --acc:#2563eb; --red:#fde2e2; --redk:#b91c1c; --yel:#fff4cc; --yelk:#92400e; --grn:#e6f4ea; --grnk:#166534; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--ink); }
+  header { display:flex; align-items:center; gap:16px; padding:10px 20px; background:var(--card); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; }
+  header b { font-size:16px; }
+  nav { display:flex; gap:4px; flex:1; }
+  nav button { background:none; border:0; padding:8px 12px; border-radius:8px; cursor:pointer; color:var(--mut); font:inherit; }
+  nav button.on { background:#eef2ff; color:var(--acc); font-weight:600; }
+  main { max-width:1400px; margin:0 auto; padding:20px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:16px; }
+  h2 { margin:0 0 12px; font-size:18px; } h3 { margin:16px 0 8px; font-size:15px; }
+  input, select, textarea { font:inherit; padding:7px 9px; border:1px solid var(--line); border-radius:8px; width:100%; background:#fff; color:inherit; }
+  textarea { min-height:140px; font-family:ui-monospace,Menlo,monospace; font-size:12px; }
+  .btn { display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:8px; border:1px solid var(--line); background:#fff; cursor:pointer; font:inherit; color:inherit; white-space:nowrap; }
+  .btn.pri { background:var(--acc); border-color:var(--acc); color:#fff; } .btn.grn { background:#16a34a; border-color:#16a34a; color:#fff; }
+  .btn:disabled { opacity:.5; cursor:default; } .btn.sm { padding:4px 9px; font-size:12px; }
+  .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; } .grow { flex:1; }
+  .mut { color:var(--mut); } .small { font-size:12px; }
+  table.list { width:100%; border-collapse:collapse; } table.list td, table.list th { padding:9px 8px; border-bottom:1px solid var(--line); text-align:left; }
+  table.list tr.click:hover { background:#f9fafb; cursor:pointer; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:99px; font-size:12px; font-weight:600; }
+  .b-review { background:var(--yel); color:var(--yelk);} .b-approved { background:var(--grn); color:var(--grnk);} .b-error { background:var(--red); color:var(--redk);}
+  .b-processing, .b-uploaded { background:#e0e7ff; color:#3730a3; }
+  .pill { display:inline-block; min-width:22px; text-align:center; padding:1px 6px; border-radius:6px; font-weight:700; font-size:12px; }
+  .pill.r { background:var(--red); color:var(--redk);} .pill.y { background:var(--yel); color:var(--yelk);}
+  .drop { border:2px dashed #c7d2fe; border-radius:12px; padding:30px; text-align:center; background:#f8faff; cursor:pointer; }
+  .thumbs { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; } .thumbs div { position:relative; } .thumbs img { width:90px; height:120px; object-fit:cover; border-radius:6px; border:1px solid var(--line); }
+  .thumbs span { position:absolute; top:4px; left:4px; background:#000a; color:#fff; border-radius:4px; padding:0 5px; font-size:11px; }
+  .split { display:grid; grid-template-columns: minmax(300px, 42%) 1fr; gap:16px; align-items:start; }
+  .orig { position:sticky; top:70px; max-height:calc(100vh - 90px); overflow:auto; background:#fff; border:1px solid var(--line); border-radius:12px; }
+  .orig img { width:100%; display:block; }
+  .issues { max-height:260px; overflow:auto; } .issue { display:flex; gap:8px; padding:6px 8px; border-radius:8px; margin-bottom:4px; cursor:pointer; align-items:flex-start; }
+  .issue.red { background:var(--red); } .issue.yellow { background:var(--yel); } .issue .grow { min-width:0; }
+  .tline { display:grid; grid-template-columns: 38% 1fr; gap:8px; align-items:center; padding:3px 4px; border-radius:6px; }
+  .tline .src { color:var(--mut); font-size:12px; overflow-wrap:anywhere; }
+  .hl-red { background:var(--red); outline:1px solid #f5a3a3; } .hl-yellow { background:var(--yel); outline:1px solid #f3d27a; }
+  .flash { animation: flash 1.2s; } @keyframes flash { 0%{ box-shadow:0 0 0 3px var(--acc);} 100%{ box-shadow:0 0 0 0 transparent;} }
+  table.grid { border-collapse:collapse; width:100%; font-size:12px; } table.grid td, table.grid th { border:1px solid var(--line); padding:0; }
+  table.grid input { border:0; border-radius:0; padding:4px; font-size:12px; text-align:center; } table.grid td.lab input { text-align:left; }
+  table.grid th { background:#f3f4f6; padding:4px; font-weight:600; }
+  .tabs { display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap; }
+  .login { max-width:380px; margin:10vh auto; }
+  .toast { position:fixed; bottom:20px; right:20px; background:#111827; color:#fff; padding:10px 16px; border-radius:10px; z-index:20; max-width:420px; }
+  .spin { display:inline-block; width:12px; height:12px; border:2px solid #c7d2fe; border-top-color:var(--acc); border-radius:50%; animation:sp 1s linear infinite; } @keyframes sp { to { transform:rotate(360deg);} }
+  @media (max-width: 900px) { .split { grid-template-columns: 1fr; } .orig { position:static; max-height:none; } nav button { padding:6px 8px; } }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script type="module">
+import * as core from './core.js';
+const CFG = {
+  url: 'https://vwhsbpiweajzorwmvhan.supabase.co',
+  key: 'sb_publishable_hQ7aiwvdT6CjcdeC0cFAdg_8AA1bKlk',
+};
+const { createClient } = await import(window.SUPA_MODULE || 'https://esm.sh/@supabase/supabase-js@2');
+const sb = createClient(CFG.url, CFG.key);
+
+// ---------- tiny helpers ----------
+const $ = (s, r = document) => r.querySelector(s);
+const h = (tag, attrs = {}, ...kids) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (k === 'class') e.className = v; else if (k === 'html') e.innerHTML = v;
+    else if (v !== false && v != null) e.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of kids.flat()) if (c != null && c !== false) e.append(c.nodeType ? c : document.createTextNode(String(c)));
+  return e;
+};
+const toast = (msg, ms = 3500) => { const t = h('div', { class: 'toast' }, msg); document.body.append(t); setTimeout(() => t.remove(), ms); };
+const STATUS = { uploaded: 'Yüklendi', processing: 'Çevriliyor', review: 'Kontrol bekliyor', approved: 'Onaylandı', error: 'Hata' };
+const DIR = { 'tr->az': 'Türkçe → Azerbaycanca', 'az->tr': 'Azerbaycanca → Türkçe' };
+const fmtDate = d => new Date(d).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+
+let state = { view: 'jobs', settings: {}, jobId: null, pageIdx: 0 };
+let pollTimer = null;
+
+async function loadSettings() {
+  const { data, error } = await sb.from('nt_settings').select('key,value');
+  if (error) throw error;
+  state.settings = Object.fromEntries(data.map(r => [r.key, r.value]));
+}
+const glossaryFor = dir => state.settings[dir === 'tr->az' ? 'glossary_tr_az' : 'glossary_az_tr'] || {};
+async function saveSetting(key, value) {
+  const { error } = await sb.from('nt_settings').upsert({ key, value, updated_at: new Date().toISOString() });
+  if (error) throw error;
+  state.settings[key] = value;
+}
+
+// ---------- shell ----------
+async function boot() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return renderLogin();
+  const { data: member } = await sb.rpc('nt_is_member');
+  if (!member) return renderJoin(session.user.email);
+  await loadSettings();
+  renderShell();
+}
+sb.auth.onAuthStateChange((ev) => { if (ev === 'SIGNED_OUT') renderLogin(); });
+
+function renderShell() {
+  const nav = [['new', 'Yeni belge'], ['jobs', 'Belgeler'], ['glossary', 'Sözlük'], ['settings', 'Ayarlar']];
+  $('#app').replaceChildren(
+    h('header', {}, h('b', {}, 'Tercüme Paneli'),
+      h('nav', {}, nav.map(([k, t]) => h('button', { class: state.view === k || (k === 'jobs' && state.view === 'job') ? 'on' : '', onclick: () => go(k) }, t))),
+      h('button', { class: 'btn sm', onclick: () => sb.auth.signOut() }, 'Çıkış')),
+    h('main', { id: 'main' }));
+  ({ new: viewNew, jobs: viewJobs, job: viewJob, glossary: viewGlossary, settings: viewSettings })[state.view]();
+}
+function go(view, extra = {}) { clearInterval(pollTimer); Object.assign(state, { view }, extra); renderShell(); }
+
+// ---------- login / join ----------
+function renderLogin() {
+  let mode = 'in';
+  const email = h('input', { type: 'email', placeholder: 'E-posta', autocomplete: 'email' });
+  const pass = h('input', { type: 'password', placeholder: 'Şifre (en az 6 karakter)', autocomplete: 'current-password' });
+  const msg = h('div', { class: 'mut small' });
+  const title = h('h2', {}, 'Giriş yap');
+  const btn = h('button', { class: 'btn pri', onclick: async () => {
+    btn.disabled = true; msg.textContent = '';
+    const fn = mode === 'in' ? sb.auth.signInWithPassword : sb.auth.signUp;
+    const { data, error } = await fn.call(sb.auth, { email: email.value.trim(), password: pass.value });
+    btn.disabled = false;
+    if (error) return (msg.textContent = error.message);
+    if (mode === 'up' && !data.session) return (msg.textContent = 'Hesap oluşturuldu. E-postanıza gelen bağlantıya tıklayıp sonra giriş yapın.');
+    boot();
+  } }, 'Giriş yap');
+  const sw = h('button', { class: 'btn sm', onclick: () => {
+    mode = mode === 'in' ? 'up' : 'in';
+    title.textContent = btn.textContent = mode === 'in' ? 'Giriş yap' : 'Hesap oluştur';
+    sw.textContent = mode === 'in' ? 'Hesabım yok, oluştur' : 'Hesabım var, giriş yap';
+  } }, 'Hesabım yok, oluştur');
+  $('#app').replaceChildren(h('div', { class: 'card login' }, title, h('div', { style: 'display:grid;gap:10px' }, email, pass, btn, msg, sw)));
+}
+function renderJoin(emailAddr) {
+  const code = h('input', { placeholder: 'Ofis kodu' });
+  const msg = h('div', { class: 'mut small' });
+  $('#app').replaceChildren(h('div', { class: 'card login' }, h('h2', {}, 'Ofis koduyla katılın'),
+    h('p', { class: 'mut' }, `${emailAddr} hesabı henüz bu panele eklenmedi. Size verilen ofis kodunu girin.`),
+    h('div', { style: 'display:grid;gap:10px' }, code,
+      h('button', { class: 'btn pri', onclick: async () => {
+        const { data, error } = await sb.rpc('nt_join', { code: code.value.trim().toUpperCase() });
+        if (error || !data) return (msg.textContent = 'Kod yanlış.');
+        boot();
+      } }, 'Katıl'), msg, h('button', { class: 'btn sm', onclick: () => sb.auth.signOut() }, 'Başka hesapla giriş'))));
+}
+
+// ---------- new job ----------
+async function resizeImage(file, max = 2400) {
+  const img = await createImageBitmap(file);
+  const s = Math.min(1, max / Math.max(img.width, img.height));
+  const c = h('canvas'); c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+  return await new Promise(r => c.toBlob(r, 'image/jpeg', 0.9));
+}
+function viewNew() {
+  let files = [];
+  const title = h('input', { placeholder: 'Örn: Muhammed Zengin – diploma + transkript' });
+  const client = h('input', { placeholder: 'Müşteri adı (isteğe bağlı)' });
+  const dir = h('select', {}, Object.entries(DIR).map(([k, v]) => h('option', { value: k, selected: (state.settings.default_direction || {}).value === k }, v)));
+  const input = h('input', { type: 'file', accept: 'image/*', multiple: true, style: 'display:none', onchange: e => add([...e.target.files]) });
+  const thumbs = h('div', { class: 'thumbs' });
+  const add = list => { files.push(...list.filter(f => f.type.startsWith('image/'))); draw(); };
+  const draw = () => thumbs.replaceChildren(...files.map((f, i) => h('div', {}, h('img', { src: URL.createObjectURL(f) }), h('span', {}, i + 1),
+    h('button', { class: 'btn sm', style: 'position:absolute;bottom:4px;right:4px', onclick: () => { files.splice(i, 1); draw(); } }, '✕'))));
+  const drop = h('div', { class: 'drop', onclick: () => input.click(),
+    ondragover: e => e.preventDefault(), ondrop: e => { e.preventDefault(); add([...e.dataTransfer.files]); } },
+    h('div', { style: 'font-size:28px' }, '📄'), h('b', {}, 'Belge fotoğraflarını buraya bırakın veya tıklayın'),
+    h('div', { class: 'mut small' }, 'Her fotoğraf bir sayfa olur. Sıra: yüklediğiniz sıra. Net, düz ve tam sayfa çekin.'));
+  const status = h('div', { class: 'mut' });
+  const go_ = h('button', { class: 'btn pri', onclick: async () => {
+    if (!files.length) return toast('Önce en az bir fotoğraf ekleyin.');
+    go_.disabled = true;
+    try {
+      const id = crypto.randomUUID(), pages = [];
+      for (const [i, f] of files.entries()) {
+        status.textContent = `Yükleniyor ${i + 1}/${files.length}…`;
+        const blob = await resizeImage(f), path = `${id}/${String(i + 1).padStart(2, '0')}.jpg`;
+        const { error } = await sb.storage.from('nt-docs').upload(path, blob, { contentType: 'image/jpeg' });
+        if (error) throw error;
+        pages.push({ path, status: 'queued' });
+      }
+      const { error } = await sb.from('nt_jobs').insert({ id, title: title.value.trim() || files[0].name, client_name: client.value.trim() || null, direction: dir.value, status: 'processing', pages });
+      if (error) throw error;
+      status.textContent = 'Çeviri başlatılıyor…';
+      const r = await sb.functions.invoke('nt-process', { body: { job_id: id, page: 0 } });
+      if (r.error) throw r.error;
+      go('job', { jobId: id, pageIdx: 0 });
+    } catch (e) { go_.disabled = false; status.textContent = 'Hata: ' + (e.message || e); }
+  } }, 'Çeviriyi başlat');
+  $('#main').append(h('div', { class: 'card' }, h('h2', {}, 'Yeni belge'),
+    h('div', { style: 'display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;margin-bottom:12px' }, title, client, dir),
+    drop, input, thumbs, h('div', { class: 'row', style: 'margin-top:14px' }, go_, status)));
+}
+
+// ---------- jobs list ----------
+async function viewJobs() {
+  const q = h('input', { placeholder: 'Ara: isim, müşteri…', style: 'max-width:320px' });
+  const body = h('tbody');
+  const card = h('div', { class: 'card' }, h('div', { class: 'row', style: 'margin-bottom:10px' }, h('h2', { class: 'grow', style: 'margin:0' }, 'Belgeler'), q,
+    h('button', { class: 'btn pri', onclick: () => go('new') }, '+ Yeni belge')),
+    h('table', { class: 'list' }, h('thead', {}, h('tr', {}, ['Belge', 'Müşteri', 'Yön', 'Sayfa', 'Durum', 'Kontrol', 'Tarih'].map(t => h('th', {}, t)))), body));
+  $('#main').append(card);
+  const load = async () => {
+    const { data, error } = await sb.from('nt_jobs').select('id,title,client_name,direction,status,red,yellow,created_at,pages').order('created_at', { ascending: false }).limit(200);
+    if (error) return toast(error.message);
+    const term = core.norm(q.value);
+    body.replaceChildren(...data.filter(j => !term || core.norm(`${j.title} ${j.client_name}`).includes(term)).map(j =>
+      h('tr', { class: 'click', onclick: () => go('job', { jobId: j.id, pageIdx: 0 }) },
+        h('td', {}, h('b', {}, j.title || '—')), h('td', {}, j.client_name || ''), h('td', { class: 'small' }, DIR[j.direction]),
+        h('td', {}, j.pages.length), h('td', {}, h('span', { class: `badge b-${j.status}` }, j.status === 'processing' ? h('span', { class: 'spin' }) : '', ' ', STATUS[j.status])),
+        h('td', {}, j.status === 'review' || j.status === 'approved' ? [h('span', { class: 'pill r' }, j.red), ' ', h('span', { class: 'pill y' }, j.yellow)] : ''),
+        h('td', { class: 'small mut' }, fmtDate(j.created_at)))));
+    if (!data.length) body.replaceChildren(h('tr', {}, h('td', { colspan: 7, class: 'mut' }, 'Henüz belge yok. "Yeni belge" ile başlayın.')));
+  };
+  q.oninput = debounce(load, 200);
+  await load();
+  pollTimer = setInterval(load, 6000);
+}
+
+// ---------- review one job ----------
+async function viewJob() {
+  const { data: job, error } = await sb.from('nt_jobs').select('*').eq('id', state.jobId).single();
+  if (error) return toast(error.message);
+  const main = $('#main');
+  const G = glossaryFor(job.direction);
+  const footer = (state.settings.footer_template || {}).text || '';
+  const working = job.pages.some(p => p.status === 'queued' || p.status === 'processing');
+
+  const save = debounce(async () => {
+    const { error } = await sb.from('nt_jobs').update({ pages: job.pages, updated_at: new Date().toISOString() }).eq('id', job.id);
+    if (error) toast('Kaydedilemedi: ' + error.message); else savedLbl.textContent = 'Kaydedildi ✓';
+  }, 600);
+  const savedLbl = h('span', { class: 'mut small' });
+  const touch = () => { savedLbl.textContent = 'Kaydediliyor…'; save(); refreshIssues(); };
+
+  const issuesOf = p => {
+    if (p.status !== 'done') return [];
+    const dismissed = new Set(p.dismissed || []);
+    return [...core.runChecks(p.doc, p.tr, G, job.direction), ...(p.judge || []).filter(j => !dismissed.has(j.key + '|' + j.why))]
+      .sort((a, b) => (a.level === 'red' ? 0 : 1) - (b.level === 'red' ? 0 : 1));
+  };
+  const allIssues = () => job.pages.flatMap(issuesOf);
+
+  const head = h('div', { class: 'card' });
+  const drawHead = () => {
+    const iss = allIssues(), red = iss.filter(i => i.level === 'red').length, yel = iss.length - red;
+    head.replaceChildren(h('div', { class: 'row' },
+      h('button', { class: 'btn sm', onclick: () => go('jobs') }, '← Belgeler'),
+      h('div', { class: 'grow' }, h('h2', { style: 'margin:0' }, job.title || 'Belge'),
+        h('div', { class: 'mut small' }, `${DIR[job.direction]} · ${job.pages.length} sayfa · ${fmtDate(job.created_at)}${job.client_name ? ' · ' + job.client_name : ''}`)),
+      h('span', { class: `badge b-${job.status}` }, STATUS[job.status]),
+      working ? '' : [h('span', { class: 'pill r', title: 'Kırmızı' }, red), h('span', { class: 'pill y', title: 'Sarı' }, yel)],
+      savedLbl,
+      h('button', { class: 'btn', disabled: working, onclick: () => download(true) }, 'Kontrol kopyası'),
+      h('button', { class: 'btn pri', disabled: working, onclick: () => download(false) }, 'Word indir'),
+      job.status === 'approved' ? h('span', { class: 'badge b-approved' }, '✓ Onaylandı') :
+        h('button', { class: 'btn grn', disabled: working, onclick: async () => {
+          if (red && !confirm(`${red} kırmızı uyarı var. Yine de onaylansın mı?`)) return;
+          await sb.from('nt_jobs').update({ status: 'approved', approved_at: new Date().toISOString(), red, yellow: yel }).eq('id', job.id);
+          job.status = 'approved'; drawHead(); toast('Onaylandı. Word dosyasını indirebilirsiniz.');
+        } }, 'Onayla')));
+  };
+  const download = draft => {
+    const done = job.pages.filter(p => p.status === 'done');
+    const bodies = done.map(p => core.buildBody(p.doc, p.tr, G, job.direction, footer, { issues: draft ? issuesOf(p) : [] }));
+    const blob = new Blob([core.wrapDocx(bodies)], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+    const a = h('a', { href: URL.createObjectURL(blob), download: `${(job.title || 'ceviri').replace(/[^\p{L}\p{N}]+/gu, '_')}${draft ? '_KONTROL' : ''}.docx` });
+    document.body.append(a); a.click(); a.remove();
+  };
+
+  const pageTabs = h('div', { class: 'tabs' });
+  const area = h('div');
+  main.append(head, pageTabs, area);
+  drawHead();
+
+  let refreshIssues = () => {};
+  const drawPage = async () => {
+    const i = state.pageIdx, p = job.pages[i];
+    pageTabs.replaceChildren(...job.pages.map((pg, n) => {
+      const iss = issuesOf(pg), r = iss.filter(x => x.level === 'red').length;
+      return h('button', { class: 'btn sm' + (n === i ? ' pri' : ''), onclick: () => { state.pageIdx = n; drawPage(); } },
+        `Sayfa ${n + 1}`, pg.status === 'done' ? (r ? ` · ${r}🔴` : ' ✓') : pg.status === 'error' ? ' · hata' : [' ', h('span', { class: 'spin' })]);
+    }));
+    const { data: signed } = await sb.storage.from('nt-docs').createSignedUrl(p.path, 3600);
+    const orig = h('div', { class: 'orig' }, signed ? h('img', { src: signed.signedUrl, alt: 'Orijinal' }) : h('div', { class: 'mut', style: 'padding:20px' }, 'Görsel açılamadı'));
+    if (p.status !== 'done') {
+      area.replaceChildren(h('div', { class: 'split' }, orig, h('div', { class: 'card' },
+        p.status === 'error' ? [h('h3', {}, 'Bu sayfa işlenemedi'), h('p', { class: 'mut' }, p.error || ''),
+          h('button', { class: 'btn pri', onclick: () => rerun(i) }, 'Tekrar dene')]
+          : [h('h3', {}, [h('span', { class: 'spin' }), ' Okunuyor ve çevriliyor…']), h('p', { class: 'mut' }, 'Sayfa başına yaklaşık 1 dakika. Bu sayfayı kapatabilirsiniz, iş arka planda devam eder.')])));
+      return;
+    }
+    const issuePanel = h('div', { class: 'issues' });
+    const editor = h('div');
+    const els = {}; // where -> element for scrolling/highlight
+    const mark = (el, where) => { (els[where] = els[where] || []).push(el); return el; };
+
+    refreshIssues = () => {
+      const iss = issuesOf(p);
+      for (const list of Object.values(els)) list.forEach(e => e.classList.remove('hl-red', 'hl-yellow'));
+      for (const x of iss) (els[x.where] || []).forEach(e => e.classList.add(x.level === 'red' ? 'hl-red' : 'hl-yellow'));
+      issuePanel.replaceChildren(...(iss.length ? iss : [null]).map(x => x ? h('div', { class: 'issue ' + x.level, onclick: () => {
+        const e = (els[x.where] || [])[0]; if (e) { e.scrollIntoView({ behavior: 'smooth', block: 'center' }); e.classList.add('flash'); setTimeout(() => e.classList.remove('flash'), 1300); }
+      } }, h('b', {}, x.level === 'red' ? '🔴' : '🟡'), h('div', { class: 'grow' }, h('b', {}, x.where), ': ', x.why),
+        x.source === 'judge' && x.suggestion ? h('button', { class: 'btn sm', onclick: ev => { ev.stopPropagation(); p.tr[x.key] = x.suggestion; dismiss(x); drawEditor(); touch(); } }, 'Öneriyi uygula') : '',
+        x.source === 'judge' ? h('button', { class: 'btn sm', onclick: ev => { ev.stopPropagation(); dismiss(x); touch(); } }, 'Sorun yok') : '',
+        /Karar verilmemiş|Yeni ders adı|Önerilen terim/.test(x.why) && x.key ? h('button', { class: 'btn sm', title: 'Şu anki çeviriyi sözlüğe kalıcı olarak kaydet', onclick: ev => { ev.stopPropagation(); learn(x.key, p); } }, 'Sözlüğe kaydet') : '')
+        : h('div', { class: 'issue', style: 'background:var(--grn)' }, '✅ Bu sayfada uyarı yok.')));
+      drawHead();
+    };
+    const dismiss = x => { p.dismissed = [...(p.dismissed || []), x.key + '|' + x.why]; };
+    const learn = async (key, pg) => {
+      const src = core.collectTexts(pg.doc, core.lookups(G)).find(t => core.norm(t.src) === key);
+      if (!src) return;
+      const Gn = structuredClone(G), sec = src.kind === 'subject' ? 'subjects' : 'fields';
+      const pretty = src.src.toLocaleLowerCase('tr').replace(/(^|\s)(\p{L})/gu, (m, a, b) => a + b.toLocaleUpperCase('tr'));
+      for (const s of ['needs_translator_decision', 'not_in_sample_suggested']) for (const k of Object.keys(Gn[s] || {})) if (core.norm(k) === key) delete Gn[s][k];
+      Gn[sec] = { ...(Gn[sec] || {}), [pretty]: pg.tr[key] };
+      await saveSetting(job.direction === 'tr->az' ? 'glossary_tr_az' : 'glossary_az_tr', Gn);
+      Object.assign(G, Gn); for (const s of ['needs_translator_decision', 'not_in_sample_suggested']) G[s] = Gn[s];
+      toast(`Sözlüğe kaydedildi: ${src.src} → ${pg.tr[key]}`); refreshIssues();
+    };
+
+    const tInput = (src, where, kind) => {
+      const k = core.norm(src);
+      const L = core.lookups(G);
+      const o = L.open[k];
+      const inp = h('input', { value: p.tr[k] ?? '', oninput: e => { p.tr[k] = e.target.value; document.querySelectorAll(`[data-k="${CSS.escape(k)}"]`).forEach(x => { if (x !== e.target) x.value = e.target.value; }); touch(); } });
+      inp.dataset.k = k;
+      const line = h('div', { class: 'tline' }, h('div', { class: 'src' }, src), o ? h('div', { class: 'row', style: 'gap:6px;flex-wrap:nowrap' }, inp,
+        h('select', { style: 'max-width:150px', onchange: e => { if (e.target.value) { p.tr[k] = e.target.value; inp.value = e.target.value; touch(); } } },
+          h('option', { value: '' }, 'Seçenekler…'), core.openOptions(o).map(v => h('option', { value: v }, v)))) : inp);
+      return mark(line, where);
+    };
+    const drawEditor = () => {
+      for (const k of Object.keys(els)) delete els[k];
+      const d = p.doc, L = core.lookups(G);
+      const parts = [];
+      if ((d.header_lines || []).length) parts.push(h('h3', {}, 'Başlık'), ...d.header_lines.map((s, n) => tInput(s, `Başlık ${n + 1}`)));
+      if ((d.info || []).length) {
+        parts.push(h('h3', {}, 'Bilgiler'));
+        d.info.forEach(x => {
+          parts.push(tInput(x.label, x.label));
+          if (x.kind === 'text') parts.push(tInput(x.value, `${x.label} (değer)`));
+          else parts.push(mark(h('div', { class: 'tline' }, h('div', { class: 'src' }, `${x.label} değeri (aynen kopyalanır)`),
+            h('input', { value: x.value ?? '', oninput: e => { x.value = e.target.value; touch(); } })), x.label));
+        });
+      }
+      const T = d.table;
+      if (T && T.rows) {
+        const nSub = T.sub_columns.length;
+        parts.push(h('h3', {}, 'Tablo'), h('p', { class: 'mut small' }, 'Sol sütun: ders adının çevirisi. Sayılar orijinalden okunur; yanlış okunduysa buradan düzeltin, kontrol anında yenilenir.'));
+        const head1 = h('tr', {}, h('th', {}, ''), T.groups.map(g => mark(h('th', { colspan: nSub }, g), g)));
+        const head2 = h('tr', {}, h('th', {}, ''), T.groups.flatMap(() => T.sub_columns.map(s => h('th', {}, s))));
+        const row = r => h('tr', {}, h('td', { class: 'lab', style: 'min-width:220px' }, (() => { const el = tInput(r.label, r.label); el.style.gridTemplateColumns = '45% 1fr'; return el; })()),
+          (r.cells || []).map((c, ci) => mark(h('td', {}, h('input', { value: c ?? '', style: 'min-width:52px', oninput: e => { r.cells[ci] = e.target.value; touch(); } })), T.groups[Math.floor(ci / nSub)])));
+        parts.push(h('div', { style: 'overflow:auto' }, h('table', { class: 'grid' }, head1, head2, T.rows.map(row), (T.summary_rows || []).map(row))));
+        parts.push(h('h3', {}, 'Tablo başlıkları'), tInput(T.corner || '', 'Tablo başlığı'), ...T.groups.map(g => tInput(g, g)), ...T.sub_columns.map(s => tInput(s, s)));
+      }
+      if ((d.body_text || []).length) parts.push(h('h3', {}, 'Metin'), ...d.body_text.map((s, n) => tInput(s, `Metin ${n + 1}`)));
+      const notes = core.visibleNotes(d, L);
+      if (notes.length) parts.push(h('h3', {}, 'Notlar'), ...notes.map(s => tInput(s, s)));
+      if ((d.signatures || []).length) parts.push(h('h3', {}, 'İmzalar'), ...d.signatures.map(s => tInput(s.title, `İmza: ${s.name}`)));
+      parts.push(h('label', { class: 'row small', style: 'margin-top:10px' }, h('input', { type: 'checkbox', style: 'width:auto', checked: !!d.has_stamp, onchange: e => { d.has_stamp = e.target.checked; touch(); } }), 'Belgede mühür var'));
+      editor.replaceChildren(...parts);
+      refreshIssues();
+    };
+
+    area.replaceChildren(h('div', { class: 'split' }, orig, h('div', {},
+      h('div', { class: 'card' }, h('div', { class: 'row', style: 'margin-bottom:8px' }, h('h3', { class: 'grow', style: 'margin:0' }, 'Uyarılar'),
+        h('button', { class: 'btn sm', onclick: () => { if (confirm('Bu sayfa yeniden okunup çevrilsin mi? Bu sayfadaki düzeltmeler silinir.')) rerun(i); } }, 'Sayfayı yeniden çevir')), issuePanel),
+      h('div', { class: 'card' }, h('h3', { style: 'margin-top:0' }, 'Çeviri (düzenlenebilir)'), editor))));
+    drawEditor();
+  };
+  const rerun = async i => {
+    job.pages[i] = { path: job.pages[i].path, status: 'queued' };
+    await sb.from('nt_jobs').update({ pages: job.pages, status: 'processing' }).eq('id', job.id);
+    await sb.functions.invoke('nt-process', { body: { job_id: job.id, page: i } });
+    go('job', { jobId: job.id, pageIdx: i });
+  };
+  await drawPage();
+  if (working) pollTimer = setInterval(async () => {
+    const { data } = await sb.from('nt_jobs').select('status,pages').eq('id', job.id).single();
+    if (data && JSON.stringify(data.pages.map(p => p.status)) !== JSON.stringify(job.pages.map(p => p.status))) { clearInterval(pollTimer); go('job', { jobId: job.id, pageIdx: state.pageIdx }); }
+  }, 4000);
+}
+
+// ---------- glossary ----------
+function viewGlossary() {
+  let dir = (state.settings.default_direction || {}).value || 'tr->az';
+  const SECTIONS = { subjects: 'Dersler', fields: 'Alanlar ve etiketler', header: 'Başlıklar', diploma: 'Diploma', other_documents: 'Diğer belgeler', grades: 'Notlar', degrees: 'Dereceler', patronymic: 'Oğlu / kızı' };
+  const card = h('div', { class: 'card' });
+  $('#main').append(card);
+  const draw = () => {
+    const G = structuredClone(glossaryFor(dir)), key = dir === 'tr->az' ? 'glossary_tr_az' : 'glossary_az_tr';
+    const q = h('input', { placeholder: 'Sözlükte ara…', style: 'max-width:260px' });
+    const list = h('div');
+    const drawList = () => {
+      const term = core.norm(q.value), out = [];
+      const dec = G.needs_translator_decision || {};
+      const decKeys = Object.keys(dec).filter(k => !k.startsWith('_') && (!term || core.norm(k).includes(term)));
+      if (decKeys.length) {
+        out.push(h('h3', {}, `Karar bekleyen terimler (${decKeys.length})`), h('p', { class: 'mut small' }, 'Örnek çevirilerde farklı yazılmış. Birini seçin; seçilen kalıcı olarak sözlüğe girer.'));
+        decKeys.forEach(k => out.push(h('div', { class: 'tline hl-yellow', style: 'margin-bottom:4px' }, h('div', {}, h('b', {}, k)),
+          h('select', { onchange: e => { if (!e.target.value) return; const sec = /ders|bilgisi|kültür|sanat|müzik|yönlendirme/i.test(k) ? 'subjects' : 'fields'; G[sec] = { ...(G[sec] || {}), [k]: e.target.value }; delete dec[k]; dirty(); drawList(); } },
+            h('option', { value: '' }, 'Seçin…'), core.openOptions(dec[k]).map(v => h('option', { value: v }, v))))));
+      }
+      for (const [sec, label] of Object.entries(SECTIONS)) {
+        const entries = Object.entries(G[sec] || {}).filter(([k, v]) => !k.startsWith('_') && typeof v === 'string' && (!term || core.norm(k + ' ' + v).includes(term)));
+        if (!entries.length && term) continue;
+        out.push(h('h3', {}, `${label} (${entries.length})`));
+        entries.forEach(([k, v]) => out.push(h('div', { class: 'tline' },
+          h('input', { value: k, onchange: e => { const nv = e.target.value.trim(); delete G[sec][k]; if (nv) G[sec][nv] = v; dirty(); } }),
+          h('div', { class: 'row', style: 'flex-wrap:nowrap;gap:6px' }, h('input', { value: v, oninput: e => { G[sec][k] = e.target.value; dirty(); } }),
+            h('button', { class: 'btn sm', onclick: () => { delete G[sec][k]; dirty(); drawList(); } }, '✕')))));
+        const nk = h('input', { placeholder: 'Orijinal (yeni)' }), nv = h('input', { placeholder: 'Çeviri' });
+        out.push(h('div', { class: 'tline' }, nk, h('div', { class: 'row', style: 'flex-wrap:nowrap;gap:6px' }, nv,
+          h('button', { class: 'btn sm', onclick: () => { if (!nk.value.trim()) return; G[sec] = { ...(G[sec] || {}), [nk.value.trim()]: nv.value.trim() }; dirty(); drawList(); } }, '+ Ekle'))));
+      }
+      list.replaceChildren(...out);
+    };
+    const saveBtn = h('button', { class: 'btn pri', disabled: true, onclick: async () => {
+      try { await saveSetting(key, G); saveBtn.disabled = true; toast('Sözlük kaydedildi. Yeni belgelerde kullanılacak.'); } catch (e) { toast(e.message); }
+    } }, 'Kaydet');
+    const dirty = () => { saveBtn.disabled = false; };
+    q.oninput = debounce(drawList, 150);
+    card.replaceChildren(h('div', { class: 'row', style: 'margin-bottom:8px' }, h('h2', { class: 'grow', style: 'margin:0' }, 'Sözlük'),
+      h('select', { style: 'max-width:240px', onchange: e => { dir = e.target.value; draw(); } }, Object.entries(DIR).map(([k, v]) => h('option', { value: k, selected: k === dir }, v))),
+      q, saveBtn),
+      h('p', { class: 'mut small' }, 'Sözlükteki terimler her zaman aynen kullanılır, yapay zekâya bırakılmaz. İnceleme ekranındaki "Sözlüğe kaydet" düğmesi de buraya ekler.'), list);
+    drawList();
+  };
+  draw();
+}
+
+// ---------- settings ----------
+async function viewSettings() {
+  const s = state.settings;
+  const footer = h('textarea', {}, (s.footer_template || {}).text || '');
+  const dir = h('select', {}, Object.entries(DIR).map(([k, v]) => h('option', { value: k, selected: (s.default_direction || {}).value === k }, v)));
+  const m = s.models || {};
+  const mf = Object.fromEntries(['read', 'translate', 'judge', 'base_url'].map(k => [k, h('input', { value: m[k] || '' })]));
+  const { data: members } = await sb.from('nt_members').select('email,created_at').order('created_at');
+  $('#main').append(
+    h('div', { class: 'card' }, h('h2', {}, 'Tercüman ve noter metni'),
+      h('p', { class: 'mut small' }, 'Her belgenin altına eklenir. {from}, {to} ve {date} otomatik doldurulur. ">" ile başlayan satır sağa yaslanır (noter adı).'),
+      footer, h('div', { class: 'row', style: 'margin-top:10px' }, h('label', {}, 'Varsayılan yön'), h('div', { style: 'width:260px' }, dir),
+        h('button', { class: 'btn pri', onclick: async () => {
+          await saveSetting('footer_template', { text: footer.value }); await saveSetting('default_direction', { value: dir.value }); toast('Kaydedildi.');
+        } }, 'Kaydet'))),
+    h('div', { class: 'card' }, h('h2', {}, 'Kullanıcılar'),
+      h('p', { class: 'mut' }, 'Yeni kişi eklemek için: panelde hesap oluşturup bu ofis kodunu girmesi yeterli.'),
+      h('p', {}, 'Ofis kodu: ', h('b', { style: 'font-size:18px;letter-spacing:2px' }, (s.join_code || {}).code || '—')),
+      h('table', { class: 'list' }, (members || []).map(x => h('tr', {}, h('td', {}, x.email), h('td', { class: 'mut small' }, fmtDate(x.created_at)),
+        h('td', {}, h('button', { class: 'btn sm', onclick: async () => { if (!confirm(`${x.email} erişimi kaldırılsın mı?`)) return; await sb.from('nt_members').delete().eq('email', x.email); go('settings'); } }, 'Kaldır')))))),
+    h('div', { class: 'card' }, h('h2', {}, 'Yapay zekâ modelleri (gelişmiş)'),
+      h('p', { class: 'mut small' }, 'Groq anahtarı Supabase → Edge Functions → Secrets içinde GROQ_API_KEY olarak saklanır, burada görünmez.'),
+      h('div', { style: 'display:grid;grid-template-columns:160px 1fr;gap:8px;align-items:center' },
+        'Okuma (görsel)', mf.read, 'Çeviri', mf.translate, 'İkinci kontrol', mf.judge, 'API adresi', mf.base_url),
+      h('button', { class: 'btn', style: 'margin-top:10px', onclick: async () => { await saveSetting('models', Object.fromEntries(Object.entries(mf).map(([k, e]) => [k, e.value.trim()]))); toast('Kaydedildi.'); } }, 'Kaydet')));
+}
+
+boot().catch(e => { $('#app').replaceChildren(h('div', { class: 'card login' }, h('h2', {}, 'Bağlantı hatası'), h('p', { class: 'mut' }, e.message || String(e)))); });
+</script>
+</body>
+</html>
