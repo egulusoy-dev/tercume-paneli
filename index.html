@@ -237,12 +237,18 @@ async function viewJob() {
   const footer = (state.settings.footer_template || {}).text || '';
   const working = job.pages.some(p => p.status === 'queued' || p.status === 'processing');
 
+  const dirty = new Set();
   const save = debounce(async () => {
-    const { error } = await sb.from('nt_jobs').update({ pages: job.pages, updated_at: new Date().toISOString() }).eq('id', job.id);
-    if (error) toast('Kaydedilemedi: ' + error.message); else savedLbl.textContent = 'Kaydedildi ✓';
+    for (const idx of [...dirty]) {
+      dirty.delete(idx);
+      const pg = job.pages[idx];
+      const { error } = await sb.rpc('nt_patch_page', { p_job: job.id, p_idx: idx, p_patch: { doc: pg.doc, tr: pg.tr, dismissed: pg.dismissed || [] } });
+      if (error) return toast('Kaydedilemedi: ' + error.message);
+    }
+    savedLbl.textContent = 'Kaydedildi ✓';
   }, 600);
   const savedLbl = h('span', { class: 'mut small' });
-  const touch = () => { savedLbl.textContent = 'Kaydediliyor…'; save(); refreshIssues(); };
+  const touch = () => { dirty.add(state.pageIdx); savedLbl.textContent = 'Kaydediliyor…'; save(); refreshIssues(); };
 
   const issuesOf = p => {
     if (p.status !== 'done') return [];
@@ -298,7 +304,8 @@ async function viewJob() {
       area.replaceChildren(h('div', { class: 'split' }, orig, h('div', { class: 'card' },
         p.status === 'error' ? [h('h3', {}, 'Bu sayfa işlenemedi'), h('p', { class: 'mut' }, p.error || ''),
           h('button', { class: 'btn pri', onclick: () => rerun(i) }, 'Tekrar dene')]
-          : [h('h3', {}, [h('span', { class: 'spin' }), ' Okunuyor ve çevriliyor…']), h('p', { class: 'mut' }, 'Sayfa başına yaklaşık 1 dakika. Bu sayfayı kapatabilirsiniz, iş arka planda devam eder.')])));
+          : [h('h3', {}, [h('span', { class: 'spin' }), ' Okunuyor ve çevriliyor…']), h('p', { class: 'mut' }, 'Sayfa başına yaklaşık 1 dakika. Bu sayfayı kapatabilirsiniz, iş arka planda devam eder.'),
+            h('button', { class: 'btn sm', onclick: () => rerun(i) }, '5 dakikadan uzun sürdüyse: yeniden başlat')])));
       return;
     }
     const issuePanel = h('div', { class: 'issues' });
@@ -384,8 +391,7 @@ async function viewJob() {
     drawEditor();
   };
   const rerun = async i => {
-    job.pages[i] = { path: job.pages[i].path, status: 'queued' };
-    await sb.from('nt_jobs').update({ pages: job.pages, status: 'processing' }).eq('id', job.id);
+    await sb.rpc('nt_patch_page', { p_job: job.id, p_idx: i, p_patch: { status: 'queued', error: null, judge: [], dismissed: [] }, p_job_patch: { status: 'processing' } });
     await sb.functions.invoke('nt-process', { body: { job_id: job.id, page: i } });
     go('job', { jobId: job.id, pageIdx: i });
   };
@@ -420,10 +426,10 @@ function viewGlossary() {
         const entries = Object.entries(G[sec] || {}).filter(([k, v]) => !k.startsWith('_') && typeof v === 'string' && (!term || core.norm(k + ' ' + v).includes(term)));
         if (!entries.length && term) continue;
         out.push(h('h3', {}, `${label} (${entries.length})`));
-        entries.forEach(([k, v]) => out.push(h('div', { class: 'tline' },
-          h('input', { value: k, onchange: e => { const nv = e.target.value.trim(); delete G[sec][k]; if (nv) G[sec][nv] = v; dirty(); } }),
+        entries.forEach(([k0, v]) => { let k = k0; out.push(h('div', { class: 'tline' },
+          h('input', { value: k, onchange: e => { const nv = e.target.value.trim(), cur = G[sec][k]; delete G[sec][k]; if (nv) { G[sec][nv] = cur; k = nv; } dirty(); } }),
           h('div', { class: 'row', style: 'flex-wrap:nowrap;gap:6px' }, h('input', { value: v, oninput: e => { G[sec][k] = e.target.value; dirty(); } }),
-            h('button', { class: 'btn sm', onclick: () => { delete G[sec][k]; dirty(); drawList(); } }, '✕')))));
+            h('button', { class: 'btn sm', onclick: () => { delete G[sec][k]; dirty(); drawList(); } }, '✕')))); });
         const nk = h('input', { placeholder: 'Orijinal (yeni)' }), nv = h('input', { placeholder: 'Çeviri' });
         out.push(h('div', { class: 'tline' }, nk, h('div', { class: 'row', style: 'flex-wrap:nowrap;gap:6px' }, nv,
           h('button', { class: 'btn sm', onclick: () => { if (!nk.value.trim()) return; G[sec] = { ...(G[sec] || {}), [nk.value.trim()]: nv.value.trim() }; dirty(); drawList(); } }, '+ Ekle'))));
